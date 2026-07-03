@@ -1,0 +1,360 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/* =========================
+   ENUMS
+========================= */
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  BOOKED
+  CANCELLED
+  CLOSED
+}
+
+enum MessageSender {
+  CUSTOMER
+  AI
+  HUMAN
+}
+
+enum Platform {
+  WHATSAPP
+  FACEBOOK
+  INSTAGRAM
+  WEB
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+/* =========================
+   CLINIC CORE
+========================= */
+
+model Clinic {
+  id            String   @id @default(uuid())
+
+  name          String
+  description   String?
+
+  address       String?
+  googleMap     String?
+  parkingInfo   String?
+
+  phone         String?
+  whatsapp      String?
+  email         String?
+  website       String?
+
+  facebook      String?
+  instagram     String?
+
+  openingHours  String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  services      Service[]
+  faqs          FAQ[]
+  leads         Lead[]
+  doctors       Doctor[]
+  branches      Branch[]
+  appointments  Appointment[]
+  promotions    Promotion[]
+  knowledgeBase KnowledgeBase[]
+  aiSettings    AISetting?
+
+  // ✅ ADD THIS LINE (FIX)
+  chatSessions  ChatSession[]
+}
+/* =========================
+   SERVICES
+========================= */
+
+model Service {
+  id                String   @id @default(uuid())
+
+  clinicId          String
+  clinic            Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  name              String
+  category          String?
+
+  description       String?
+  shortDescription  String?
+
+  price             Float?
+  currency          String   @default("PKR")
+
+  duration          String?
+
+  downtime          String?
+  aftercare         String?
+
+  sessionsRequired  String?
+
+  isActive          Boolean  @default(true)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  faqs              FAQ[]
+  appointments      Appointment[]
+}
+
+/* =========================
+   FAQ
+========================= */
+
+model FAQ {
+  id          String   @id @default(uuid())
+
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  serviceId   String?
+  service     Service? @relation(fields: [serviceId], references: [id])
+
+  question    String
+  answer      String   @db.Text
+
+  intent      String?
+  keywords    String?
+
+  priority    Int      @default(1)
+
+  createdAt   DateTime @default(now())
+}
+
+/* =========================
+   LEADS + CHAT
+========================= */
+
+model Lead {
+  id            String   @id @default(uuid())
+
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  name          String?
+  phone         String?
+  email         String?
+
+  platform      Platform?
+
+  interestedIn  String?
+  status        LeadStatus @default(NEW)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      ChatSession[]
+  appointments  Appointment[]
+}
+
+/* =========================
+   CHAT SESSIONS
+========================= */
+
+model ChatSession {
+  id          String   @id @default(uuid())
+
+  clinicId    String
+  leadId      String
+
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  platform    Platform
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages    Message[]
+}
+
+/* =========================
+   MESSAGES
+========================= */
+
+model Message {
+  id            String   @id @default(uuid())
+
+  sessionId     String
+  session       ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  sender        MessageSender
+
+  message       String   @db.Text
+
+  createdAt     DateTime @default(now())
+}
+
+/* =========================
+   APPOINTMENTS
+========================= */
+
+model Appointment {
+  id            String   @id @default(uuid())
+
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  leadId        String?
+  lead          Lead?    @relation(fields: [leadId], references: [id])
+
+  serviceId     String?
+  service       Service? @relation(fields: [serviceId], references: [id])
+
+  date          DateTime?
+  time          String?
+
+  status        AppointmentStatus @default(PENDING)
+
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/* =========================
+   DOCTORS
+========================= */
+
+model Doctor {
+  id              String   @id @default(uuid())
+
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  name            String
+  qualification   String?
+  specialization  String?
+
+  experience      String?
+  bio             String?
+
+  fee             Float?
+
+  availability    String?
+
+  createdAt       DateTime @default(now())
+}
+
+/* =========================
+   BRANCHES
+========================= */
+
+model Branch {
+  id          String   @id @default(uuid())
+
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  name        String
+  address     String?
+  city        String?
+
+  phone       String?
+  googleMap   String?
+
+  createdAt   DateTime @default(now())
+}
+
+/* =========================
+   PROMOTIONS
+========================= */
+
+model Promotion {
+  id          String   @id @default(uuid())
+
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+
+  discount    String?
+
+  startDate   DateTime?
+  endDate     DateTime?
+
+  isActive    Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+}
+
+/* =========================
+   KNOWLEDGE BASE (AI BRAIN)
+========================= */
+
+model KnowledgeBase {
+  id          String   @id @default(uuid())
+
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  category    String   // pricing, booking, aftercare, policy, greeting
+
+  title       String
+
+  content     String   @db.Text
+
+  keywords    String?
+
+  priority    Int      @default(1)
+
+  createdAt   DateTime @default(now())
+}
+
+/* =========================
+   AI SETTINGS
+========================= */
+
+model AISetting {
+  id              String   @id @default(uuid())
+
+  clinicId        String   @unique
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  systemPrompt    String   @db.Text
+  welcomeMessage  String?
+  fallbackMessage String?
+
+  language        String   @default("en")
+
+  temperature     Float    @default(0.7)
+
+  updatedAt       DateTime @updatedAt
+}
+
+/* =========================
+   OPTIONAL: FOLLOW UPS
+========================= */
+
+model FollowUp {
+  id          String   @id @default(uuid())
+
+  leadId      String
+
+  message     String?
+
+  followDate  DateTime?
+
+  status      String   @default("PENDING")
+
+  createdAt   DateTime @default(now())
+}
