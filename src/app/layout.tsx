@@ -13,8 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Glow Aesthetic Clinic | AI Assistant",
-  description: "Professional aesthetic assistance powered by SM Technology",
+  title: "Uswa College Bhowana",
+  description: "AI assistance powered by SM Technology",
+  // Yahan se logo set ho raha hai
+  icons: {
+    icon: "/logo.jpeg",
+    shortcut: "/logo.jpeg",
+    apple: "/logo.jpeg",
+  },
 };
 
 export default function RootLayout({

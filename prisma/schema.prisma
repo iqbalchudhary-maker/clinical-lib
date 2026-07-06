@@ -3,358 +3,74 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
 }
 
-/* =========================
-   ENUMS
-========================= */
 
-enum LeadStatus {
-  NEW
-  CONTACTED
-  BOOKED
-  CANCELLED
-  CLOSED
-}
-
-enum MessageSender {
-  CUSTOMER
-  AI
-  HUMAN
-}
-
-enum Platform {
-  WHATSAPP
-  FACEBOOK
-  INSTAGRAM
-  WEB
-}
-
-enum AppointmentStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-}
-
-/* =========================
-   CLINIC CORE
-========================= */
-
-model Clinic {
-  id            String   @id @default(uuid())
-
-  name          String
-  description   String?
-
-  address       String?
-  googleMap     String?
-  parkingInfo   String?
-
-  phone         String?
-  whatsapp      String?
-  email         String?
-  website       String?
-
-  facebook      String?
-  instagram     String?
-
-  openingHours  String?
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  services      Service[]
-  faqs          FAQ[]
-  leads         Lead[]
-  doctors       Doctor[]
-  branches      Branch[]
-  appointments  Appointment[]
-  promotions    Promotion[]
-  knowledgeBase KnowledgeBase[]
-  aiSettings    AISetting?
-
-  // ✅ ADD THIS LINE (FIX)
-  chatSessions  ChatSession[]
-}
-/* =========================
-   SERVICES
-========================= */
-
-model Service {
-  id                String   @id @default(uuid())
-
-  clinicId          String
-  clinic            Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  name              String
-  category          String?
-
-  description       String?
-  shortDescription  String?
-
-  price             Float?
-  currency          String   @default("PKR")
-
-  duration          String?
-
-  downtime          String?
-  aftercare         String?
-
-  sessionsRequired  String?
-
-  isActive          Boolean  @default(true)
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  faqs              FAQ[]
-  appointments      Appointment[]
-}
-
-/* =========================
-   FAQ
-========================= */
-
-model FAQ {
-  id          String   @id @default(uuid())
-
-  clinicId    String
-  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  serviceId   String?
-  service     Service? @relation(fields: [serviceId], references: [id])
-
-  question    String
-  answer      String   @db.Text
-
-  intent      String?
-  keywords    String?
-
-  priority    Int      @default(1)
-
-  createdAt   DateTime @default(now())
-}
-
-/* =========================
-   LEADS + CHAT
-========================= */
-
-model Lead {
-  id            String   @id @default(uuid())
-
-  clinicId      String
-  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  name          String?
-  phone         String?
-  email         String?
-
-  platform      Platform?
-
-  interestedIn  String?
-  status        LeadStatus @default(NEW)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  sessions      ChatSession[]
-  appointments  Appointment[]
-}
-
-/* =========================
-   CHAT SESSIONS
-========================= */
-
-model ChatSession {
-  id          String   @id @default(uuid())
-
-  clinicId    String
-  leadId      String
-
-  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  platform    Platform
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  messages    Message[]
-}
-
-/* =========================
-   MESSAGES
-========================= */
-
-model Message {
-  id            String   @id @default(uuid())
-
-  sessionId     String
-  session       ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  sender        MessageSender
-
-  message       String   @db.Text
-
-  createdAt     DateTime @default(now())
-}
-
-/* =========================
-   APPOINTMENTS
-========================= */
-
-model Appointment {
-  id            String   @id @default(uuid())
-
-  clinicId      String
-  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  leadId        String?
-  lead          Lead?    @relation(fields: [leadId], references: [id])
-
-  serviceId     String?
-  service       Service? @relation(fields: [serviceId], references: [id])
-
-  date          DateTime?
-  time          String?
-
-  status        AppointmentStatus @default(PENDING)
-
-  notes         String?
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-/* =========================
-   DOCTORS
-========================= */
-
-model Doctor {
-  id              String   @id @default(uuid())
-
-  clinicId        String
-  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  name            String
-  qualification   String?
-  specialization  String?
-
-  experience      String?
-  bio             String?
-
-  fee             Float?
-
-  availability    String?
-
-  createdAt       DateTime @default(now())
-}
-
-/* =========================
-   BRANCHES
-========================= */
-
-model Branch {
-  id          String   @id @default(uuid())
-
-  clinicId    String
-  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
+// 1. Management & Faculty (Staff info)
+model Staff {
+  id          String   @id @default(cuid())
   name        String
-  address     String?
-  city        String?
-
-  phone       String?
-  googleMap   String?
-
-  createdAt   DateTime @default(now())
+  designation String   // Principal, Teacher, Admin
+  department  String
+  contact     String
+  isManagement Boolean @default(false)
+  rules       String?  @db.Text // Staff specific rules
 }
 
-/* =========================
-   PROMOTIONS
-========================= */
-
-model Promotion {
-  id          String   @id @default(uuid())
-
-  clinicId    String
-  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  title       String
-  description String?
-
-  discount    String?
-
-  startDate   DateTime?
-  endDate     DateTime?
-
-  isActive    Boolean @default(true)
-
-  createdAt   DateTime @default(now())
+// 2. Courses Offered
+model Course {
+  id          String   @id @default(cuid())
+  name        String   // FSc, ICS, etc.
+  duration    String
+  eligibility String
+  feeDetails  String?
 }
 
-/* =========================
-   KNOWLEDGE BASE (AI BRAIN)
-========================= */
+// 3. Fee Structure
+model FeeStructure {
+  id          String   @id @default(cuid())
+  className   String
+  admissionFee Decimal
+  monthlyFee  Decimal
+  dueDates    String
+}
 
+// 4. Student Results
+model StudentResult {
+  id          String   @id @default(cuid())
+  studentName String
+  rollNumber  String   @unique
+  className   String
+  totalMarks  Int
+  obtained    Int
+  grade       String
+  semester    String
+}
+
+// 5. Rules & Regulations (For Students)
+model RulesRegulation {
+  id          String   @id @default(cuid())
+  category    String   // Attendance, Discipline, Uniform
+  description String   @db.Text
+}
+
+// 6. Knowledge Base (FAQs) - AI ka main source
 model KnowledgeBase {
-  id          String   @id @default(uuid())
-
-  clinicId    String
-  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  category    String   // pricing, booking, aftercare, policy, greeting
-
-  title       String
-
-  content     String   @db.Text
-
-  keywords    String?
-
-  priority    Int      @default(1)
-
-  createdAt   DateTime @default(now())
+  id       String   @id @default(cuid())
+  category String   // Admission, Exam, Transport
+  question String
+  keywords String?
+  answer   String   @db.Text
 }
 
-/* =========================
-   AI SETTINGS
-========================= */
-
-model AISetting {
-  id              String   @id @default(uuid())
-
-  clinicId        String   @unique
-  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  systemPrompt    String   @db.Text
-  welcomeMessage  String?
-  fallbackMessage String?
-
-  language        String   @default("en")
-
-  temperature     Float    @default(0.7)
-
-  updatedAt       DateTime @updatedAt
-}
-
-/* =========================
-   OPTIONAL: FOLLOW UPS
-========================= */
-
-model FollowUp {
-  id          String   @id @default(uuid())
-
-  leadId      String
-
-  message     String?
-
-  followDate  DateTime?
-
-  status      String   @default("PENDING")
-
-  createdAt   DateTime @default(now())
+// 7. Admissions (Applications)
+model Admission {
+  id           String   @id @default(cuid())
+  studentName  String
+  phone        String
+  className    String
+  status       String   @default("Pending")
+  createdAt    DateTime @default(now())
 }
